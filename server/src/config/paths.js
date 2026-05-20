@@ -5,5 +5,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const projectRoot = path.resolve(__dirname, '../../');
-export const uploadsDir = path.join(projectRoot, 'uploads');
-export const dbFile = path.join(projectRoot, 'complaints.sqlite');
+const dataRoot = process.env.DATA_DIR || projectRoot;
+
+export const uploadsDir = path.join(dataRoot, 'uploads');
+export const dbFile = path.join(dataRoot, 'complaints.sqlite');
+export const clientDistDir = path.resolve(projectRoot, '../client/dist');

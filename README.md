@@ -41,13 +41,46 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000`
 
+## Production Build (Single Service)
+- Frontend is built from `client` and served by Express in production.
+- Run:
+```bash
+npm run build:all
+npm run start
+```
+- In production, app and API run from the same domain:
+  - UI: `/`
+  - API: `/api/*`
+
 ## Environment Variables
 Copy `.env.example` to `.env` and adjust values as needed.
 
+Additional optional variable:
+- `DATA_DIR` (default: `server/`)  
+  Use this in deployment so SQLite DB + uploads are stored on persistent disk.
+
 ## Database Initialization
 - SQLite DB file is created automatically at first backend startup:
-  - `server/complaints.sqlite`
+  - Local default: `server/complaints.sqlite`
+  - If `DATA_DIR` is set: `${DATA_DIR}/complaints.sqlite`
 - Seeded categories and demo users are inserted automatically.
+
+## Deploy (Render - Recommended)
+This repo includes [render.yaml](/Users/equinoxzi/Desktop/Project/render.yaml) for one-click style setup.
+
+1. Push this repo to GitHub.
+2. In Render, create a new Blueprint / Web Service from the repo.
+3. Confirm settings from `render.yaml`:
+   - Build Command: `npm run build:all`
+   - Start Command: `npm run start`
+   - Environment:
+     - `NODE_ENV=production`
+     - `PORT=10000`
+     - `JWT_SECRET` (auto-generated)
+     - `DATA_DIR=/data`
+   - Persistent Disk mounted at `/data`
+4. Deploy.
+5. Open deployed URL and login with demo credentials.
 
 ## API Endpoint Summary
 - `POST /api/auth/login` - Login

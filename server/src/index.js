@@ -9,7 +9,8 @@ import authRoutes from './routes/auth.routes.js';
 import complaintsRoutes from './routes/complaints.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import metaRoutes from './routes/meta.routes.js';
-import { uploadsDir } from './config/paths.js';
+import path from 'path';
+import { clientDistDir, uploadsDir } from './config/paths.js';
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/meta', metaRoutes);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(clientDistDir));
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDistDir, 'index.html'));
+  });
+}
 
 app.use((err, _req, res, _next) => {
   console.error(err);
