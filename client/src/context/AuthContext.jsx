@@ -3,11 +3,20 @@ import http from '../api/http';
 
 const AuthContext = createContext(null);
 
+function getStoredUser() {
+  const raw = localStorage.getItem('user');
+  if (!raw || raw === 'undefined' || raw === 'null') return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (_error) {
+    localStorage.removeItem('user');
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem('user');
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [user, setUser] = useState(getStoredUser);
 
   const login = async (email, password) => {
     const res = await http.post('/auth/login', { email, password });
