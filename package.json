@@ -10,7 +10,7 @@
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix client run build",
     "start": "npm --prefix server run start",
-    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "install:all": "npm install --include=dev && npm --prefix server install --include=dev && npm --prefix client install --include=dev",
     "build:all": "npm run install:all && npm run build"
   },
   "keywords": [],
