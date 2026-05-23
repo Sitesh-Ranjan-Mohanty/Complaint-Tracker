@@ -26,7 +26,8 @@ app.use('/api/complaints', complaintsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/meta', metaRoutes);
 
-if (process.env.NODE_ENV === 'production') {
+const hasBuiltClient = fs.existsSync(path.join(clientDistDir, 'index.html'));
+if (process.env.NODE_ENV === 'production' || hasBuiltClient) {
   app.use(express.static(clientDistDir));
   app.get(/^(?!\/api).*/, (_req, res) => {
     res.sendFile(path.join(clientDistDir, 'index.html'));
