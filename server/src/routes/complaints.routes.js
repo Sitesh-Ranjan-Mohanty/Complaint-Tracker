@@ -10,7 +10,6 @@ import { createIssueSignature } from '../utils/signature.js';
 import { env } from '../config/env.js';
 import { uploadsDir } from '../config/paths.js';
 
-fs.mkdirSync(uploadsDir, { recursive: true });
 const upload = multer({ dest: uploadsDir });
 const router = Router();
 
