@@ -13,37 +13,6 @@ import { uploadsDir } from '../config/paths.js';
 const upload = multer({ dest: uploadsDir });
 const router = Router();
 
-async function normalizeComplaintIds() {
-  const complaints = await all('SELECT id FROM complaints ORDER BY id ASC');
-  const remap = complaints
-    .map((row, index) => ({ oldId: row.id, newId: index + 1 }))
-    .filter((item) => item.oldId !== item.newId);
-
-  if (remap.length > 0) {
-    for (const { oldId, newId } of remap) {
-      await run('UPDATE complaint_comments SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
-      await run('UPDATE escalations SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
-      await run('UPDATE attachments SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
-      await run('UPDATE resolutions SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
-      await run('UPDATE complaints SET id = ? WHERE id = ?', [-newId, oldId]);
-    }
-
-    await run('UPDATE complaints SET id = ABS(id) WHERE id < 0');
-    await run('UPDATE complaint_comments SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
-    await run('UPDATE escalations SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
-    await run('UPDATE attachments SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
-    await run('UPDATE resolutions SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
-  }
-
-  const maxIdRow = await get('SELECT COALESCE(MAX(id), 0) as max_id FROM complaints');
-  const maxId = maxIdRow?.max_id || 0;
-  await run("UPDATE sqlite_sequence SET seq = ? WHERE name = 'complaints'", [maxId]);
-  await run(
-    "INSERT INTO sqlite_sequence (name, seq) SELECT 'complaints', ? WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = 'complaints')",
-    [maxId],
-  );
-}
-
 router.post(
   '/',
   authenticate,
@@ -159,11 +128,6 @@ router.get(
       filters.push('(c.title LIKE ? OR c.description LIKE ?)');
       params.push(`%${req.query.search}%`, `%${req.query.search}%`);
     }
-    if (req.user.role === 'customer') {
-      filters.push('c.customer_id = ?');
-      params.push(req.user.id);
-    }
-
     const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
     const rows = await all(
       `SELECT c.*, u.name as customer_name, a.name as agent_name, cc.name as category_name
@@ -246,7 +210,6 @@ router.delete('/:id', authenticate, authorize('customer', 'admin'), [param('id')
     await run('DELETE FROM resolutions WHERE complaint_id = ?', [req.params.id]);
     await run('DELETE FROM attachments WHERE complaint_id = ?', [req.params.id]);
     await run('DELETE FROM complaints WHERE id = ?', [req.params.id]);
-    await normalizeComplaintIds();
     await run('COMMIT');
   } catch (error) {
     await run('ROLLBACK');
