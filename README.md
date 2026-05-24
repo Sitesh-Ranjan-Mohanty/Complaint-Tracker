@@ -97,9 +97,9 @@ This repo includes [render.yaml](/Users/equinoxzi/Desktop/Project/render.yaml) f
 
 ## Submission Checklist
 Add these links before final assignment submission:
-- GitHub repository link: `ADD_LINK_HERE`
-- Deployed app link: `ADD_LINK_HERE`
-- Video walkthrough (5-8 minutes): `ADD_LINK_HERE`
+- GitHub repository link: `https://github.com/Sitesh-Ranjan-Mohanty/Complaint-Tracker.git`
+- Deployed app link: `https://complaint-tracker-app.onrender.com`
+- Video walkthrough (5-8 minutes): `https://drive.google.com/file/d/1Uf6xuI0Vch4YLSAvabD6zt1jPdwTB7aP/view?usp=drive_link`
 
 ## Screens Included
 - Complaint submission page
