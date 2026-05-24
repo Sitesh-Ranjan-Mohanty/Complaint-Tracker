@@ -74,6 +74,13 @@ button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
+.danger-btn {
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #b42318;
+}
 .table { width: 100%; border-collapse: collapse; }
 .table th, .table td { border-bottom: 1px solid #e9eff6; padding: 10px; text-align: left; }
 .table-wrap { overflow-x: auto; border-radius: 12px; }

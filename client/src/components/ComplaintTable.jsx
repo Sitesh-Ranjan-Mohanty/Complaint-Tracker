@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 
-export default function ComplaintTable({ rows }) {
+export default function ComplaintTable({ rows, canDeleteComplaint, onDeleteComplaint }) {
+  const showActions = typeof canDeleteComplaint === 'function' && typeof onDeleteComplaint === 'function';
+
   return (
     <div className="table-wrap">
       <table className="table">
@@ -17,6 +19,7 @@ export default function ComplaintTable({ rows }) {
           <th>Agent</th>
           <th>Created</th>
           <th>Due</th>
+          {showActions ? <th>Action</th> : null}
         </tr>
       </thead>
       <tbody>
@@ -32,6 +35,17 @@ export default function ComplaintTable({ rows }) {
             <td data-label="Agent">{r.agent_name || '-'}</td>
             <td data-label="Created">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
             <td data-label="Due">{r.due_at ? new Date(r.due_at).toLocaleString() : '-'}</td>
+            {showActions ? (
+              <td data-label="Action">
+                {canDeleteComplaint(r) ? (
+                  <button type="button" className="danger-btn" onClick={() => onDeleteComplaint(r.id)}>
+                    Delete
+                  </button>
+                ) : (
+                  '-'
+                )}
+              </td>
+            ) : null}
           </tr>
         ))}
       </tbody>

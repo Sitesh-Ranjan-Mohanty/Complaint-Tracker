@@ -197,6 +197,39 @@ router.put('/:id/assign', authenticate, authorize('admin'), [param('id').isInt({
   return res.json({ message: 'Assigned successfully' });
 });
 
+router.delete('/:id', authenticate, authorize('customer', 'admin'), [param('id').isInt({ min: 1 }), validate], async (req, res) => {
+  const complaint = await get('SELECT id, customer_id FROM complaints WHERE id = ?', [req.params.id]);
+  if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+  const isAdmin = req.user.role === 'admin';
+  const isOwner = req.user.id === complaint.customer_id;
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({ message: 'You can only delete your own complaint' });
+  }
+
+  const files = await all('SELECT file_path FROM attachments WHERE complaint_id = ?', [req.params.id]);
+  await run('BEGIN TRANSACTION');
+  try {
+    await run('DELETE FROM complaint_comments WHERE complaint_id = ?', [req.params.id]);
+    await run('DELETE FROM escalations WHERE complaint_id = ?', [req.params.id]);
+    await run('DELETE FROM resolutions WHERE complaint_id = ?', [req.params.id]);
+    await run('DELETE FROM attachments WHERE complaint_id = ?', [req.params.id]);
+    await run('DELETE FROM complaints WHERE id = ?', [req.params.id]);
+    await run('COMMIT');
+  } catch (error) {
+    await run('ROLLBACK');
+    throw error;
+  }
+
+  for (const row of files) {
+    if (row?.file_path && fs.existsSync(row.file_path)) {
+      fs.unlinkSync(row.file_path);
+    }
+  }
+
+  return res.json({ message: `Complaint #${req.params.id} deleted successfully` });
+});
+
 async function clearAllComplaintData(_req, res) {
   const files = await all('SELECT file_path FROM attachments');
   await run('BEGIN TRANSACTION');

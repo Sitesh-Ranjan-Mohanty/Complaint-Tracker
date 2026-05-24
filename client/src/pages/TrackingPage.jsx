@@ -3,8 +3,10 @@ import { useLocation } from 'react-router-dom';
 import http from '../api/http';
 import ComplaintFilters from '../components/ComplaintFilters';
 import ComplaintTable from '../components/ComplaintTable';
+import { useAuth } from '../context/AuthContext';
 
 export default function TrackingPage() {
+  const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [categories, setCategories] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -46,6 +48,25 @@ export default function TrackingPage() {
       });
   }, []);
 
+  const canDeleteComplaint = (complaint) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return user.role === 'customer' && user.id === complaint.customer_id;
+  };
+
+  const handleDeleteComplaint = async (id) => {
+    const confirmDelete = window.confirm(`Delete complaint #${id}? This cannot be undone.`);
+    if (!confirmDelete) return;
+
+    try {
+      setError('');
+      await http.delete(`/complaints/${id}`);
+      setRows((prev) => prev.filter((row) => row.id !== id));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete complaint.');
+    }
+  };
+
   return (
     <div className="card">
       <h2>Complaint Tracking</h2>
@@ -54,7 +75,13 @@ export default function TrackingPage() {
       {error && <p className="error">{error}</p>}
       {loading ? <p className="muted">Loading complaints...</p> : null}
       {!loading && rows.length === 0 ? <p className="muted">No complaints found for selected filters.</p> : null}
-      {!loading && rows.length > 0 ? <ComplaintTable rows={rows} /> : null}
+      {!loading && rows.length > 0 ? (
+        <ComplaintTable
+          rows={rows}
+          canDeleteComplaint={canDeleteComplaint}
+          onDeleteComplaint={handleDeleteComplaint}
+        />
+      ) : null}
     </div>
   );
 }
