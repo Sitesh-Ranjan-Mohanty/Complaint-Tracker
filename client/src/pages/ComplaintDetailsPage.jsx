@@ -25,6 +25,7 @@ export default function ComplaintDetailsPage() {
   return (
     <div className="card">
       <h2>Complaint #{data.complaint.id}</h2>
+      <p><strong>Customer Complaint No:</strong> {data.complaint.customer_complaint_no || '-'}</p>
       <p><strong>{data.complaint.title}</strong></p>
       <p>{data.complaint.description}</p>
       <h3>Comments</h3>

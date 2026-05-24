@@ -39,10 +39,15 @@ router.post(
     }
 
     const dueAt = dayjs().add(priority === 'critical' ? 8 : priority === 'high' ? 24 : 48, 'hour').toISOString();
+    const seqRow = await get(
+      'SELECT COALESCE(MAX(customer_complaint_no), 0) as max_no FROM complaints WHERE customer_id = ?',
+      [req.user.id],
+    );
+    const customerComplaintNo = (seqRow?.max_no || 0) + 1;
     const inserted = await run(
-      `INSERT INTO complaints (customer_id, category_id, title, description, issue_signature, priority, due_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [req.user.id, categoryId || null, title, description, signature, priority, dueAt],
+      `INSERT INTO complaints (customer_id, customer_complaint_no, category_id, title, description, issue_signature, priority, due_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.user.id, customerComplaintNo, categoryId || null, title, description, signature, priority, dueAt],
     );
 
     for (const file of req.files || []) {
@@ -52,7 +57,7 @@ router.post(
       );
     }
 
-    return res.status(201).json({ id: inserted.id, message: 'Complaint created' });
+    return res.status(201).json({ id: inserted.id, customerComplaintNo, message: 'Complaint created' });
   },
 );
 

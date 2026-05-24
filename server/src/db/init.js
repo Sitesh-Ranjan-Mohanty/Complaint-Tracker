@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { db, run } from './database.js';
+import { all, db, run } from './database.js';
 
 export async function initDb() {
   db.serialize();
@@ -27,6 +27,7 @@ export async function initDb() {
   await run(`CREATE TABLE IF NOT EXISTS complaints (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     customer_id INTEGER NOT NULL,
+    customer_complaint_no INTEGER NOT NULL DEFAULT 0,
     category_id INTEGER,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
@@ -39,8 +40,28 @@ export async function initDb() {
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES users(id),
     FOREIGN KEY (category_id) REFERENCES complaint_categories(id),
-    FOREIGN KEY (assigned_agent_id) REFERENCES users(id)
+    FOREIGN KEY (assigned_agent_id) REFERENCES users(id),
+    UNIQUE (customer_id, customer_complaint_no)
   )`);
+
+  const complaintColumns = await all(`PRAGMA table_info(complaints)`);
+  const hasCustomerSequence = complaintColumns.some((column) => column.name === 'customer_complaint_no');
+  if (!hasCustomerSequence) {
+    await run('ALTER TABLE complaints ADD COLUMN customer_complaint_no INTEGER NOT NULL DEFAULT 0');
+  }
+
+  // Backfill per-customer sequential complaint number for existing records.
+  const complaintRows = await all('SELECT id, customer_id FROM complaints ORDER BY customer_id ASC, created_at ASC, id ASC');
+  const sequenceByCustomer = new Map();
+  for (const complaint of complaintRows) {
+    const nextNo = (sequenceByCustomer.get(complaint.customer_id) || 0) + 1;
+    sequenceByCustomer.set(complaint.customer_id, nextNo);
+    await run('UPDATE complaints SET customer_complaint_no = ? WHERE id = ?', [nextNo, complaint.id]);
+  }
+
+  await run(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_complaints_customer_sequence ON complaints(customer_id, customer_complaint_no)',
+  );
 
   await run(`CREATE TABLE IF NOT EXISTS complaint_comments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
