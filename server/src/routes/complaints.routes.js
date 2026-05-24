@@ -13,6 +13,37 @@ import { uploadsDir } from '../config/paths.js';
 const upload = multer({ dest: uploadsDir });
 const router = Router();
 
+async function normalizeComplaintIds() {
+  const complaints = await all('SELECT id FROM complaints ORDER BY id ASC');
+  const remap = complaints
+    .map((row, index) => ({ oldId: row.id, newId: index + 1 }))
+    .filter((item) => item.oldId !== item.newId);
+
+  if (remap.length > 0) {
+    for (const { oldId, newId } of remap) {
+      await run('UPDATE complaint_comments SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
+      await run('UPDATE escalations SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
+      await run('UPDATE attachments SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
+      await run('UPDATE resolutions SET complaint_id = ? WHERE complaint_id = ?', [-newId, oldId]);
+      await run('UPDATE complaints SET id = ? WHERE id = ?', [-newId, oldId]);
+    }
+
+    await run('UPDATE complaints SET id = ABS(id) WHERE id < 0');
+    await run('UPDATE complaint_comments SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
+    await run('UPDATE escalations SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
+    await run('UPDATE attachments SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
+    await run('UPDATE resolutions SET complaint_id = ABS(complaint_id) WHERE complaint_id < 0');
+  }
+
+  const maxIdRow = await get('SELECT COALESCE(MAX(id), 0) as max_id FROM complaints');
+  const maxId = maxIdRow?.max_id || 0;
+  await run("UPDATE sqlite_sequence SET seq = ? WHERE name = 'complaints'", [maxId]);
+  await run(
+    "INSERT INTO sqlite_sequence (name, seq) SELECT 'complaints', ? WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = 'complaints')",
+    [maxId],
+  );
+}
+
 router.post(
   '/',
   authenticate,
@@ -39,15 +70,10 @@ router.post(
     }
 
     const dueAt = dayjs().add(priority === 'critical' ? 8 : priority === 'high' ? 24 : 48, 'hour').toISOString();
-    const seqRow = await get(
-      'SELECT COALESCE(MAX(customer_complaint_no), 0) as max_no FROM complaints WHERE customer_id = ?',
-      [req.user.id],
-    );
-    const customerComplaintNo = (seqRow?.max_no || 0) + 1;
     const inserted = await run(
-      `INSERT INTO complaints (customer_id, customer_complaint_no, category_id, title, description, issue_signature, priority, due_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.user.id, customerComplaintNo, categoryId || null, title, description, signature, priority, dueAt],
+      `INSERT INTO complaints (customer_id, category_id, title, description, issue_signature, priority, due_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [req.user.id, categoryId || null, title, description, signature, priority, dueAt],
     );
 
     for (const file of req.files || []) {
@@ -57,7 +83,7 @@ router.post(
       );
     }
 
-    return res.status(201).json({ id: inserted.id, customerComplaintNo, message: 'Complaint created' });
+    return res.status(201).json({ id: inserted.id, message: 'Complaint created' });
   },
 );
 
@@ -220,6 +246,7 @@ router.delete('/:id', authenticate, authorize('customer', 'admin'), [param('id')
     await run('DELETE FROM resolutions WHERE complaint_id = ?', [req.params.id]);
     await run('DELETE FROM attachments WHERE complaint_id = ?', [req.params.id]);
     await run('DELETE FROM complaints WHERE id = ?', [req.params.id]);
+    await normalizeComplaintIds();
     await run('COMMIT');
   } catch (error) {
     await run('ROLLBACK');

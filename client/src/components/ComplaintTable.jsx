@@ -10,7 +10,6 @@ export default function ComplaintTable({ rows, canDeleteComplaint, onDeleteCompl
       <thead>
         <tr>
           <th>ID</th>
-          <th>Complaint No</th>
           <th>Title</th>
           <th>Description</th>
           <th>Customer</th>
@@ -27,7 +26,6 @@ export default function ComplaintTable({ rows, canDeleteComplaint, onDeleteCompl
         {rows.map((r) => (
           <tr key={r.id}>
             <td data-label="ID"><Link to={`/complaints/${r.id}`}>#{r.id}</Link></td>
-            <td data-label="Complaint No">{r.customer_complaint_no || '-'}</td>
             <td data-label="Title">{r.title}</td>
             <td data-label="Description">{r.description}</td>
             <td data-label="Customer">{r.customer_name || '-'}</td>
